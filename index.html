@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard KSA Jagung Jawa Tengah</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; }
+        .tab-content { padding: 20px; }
+        .card { margin-bottom: 20px; }
+        .chart-container { height: 400px; }
+    <style>
+body {
+  font-family: Arial, sans-serif;
+  background:#f5f7fa;
+  margin:0;
+  padding:20px;
+}
+.wrapper {
+  max-width:1200px;
+  margin:auto;
+}
+.header {
+  display:flex;
+  gap:15px;
+  align-items:center;
+  margin-bottom:20px;
+}
+select {
+  padding:8px 12px;
+  font-size:14px;
+}
+.chart-box {
+  background:#fff;
+  border-radius:10px;
+  padding:20px;
+  box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+canvas {
+  width:100% !important;
+  max-height:450px;
+}
+.status {
+  margin-bottom:15px;
+}
+.table-box {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  margin-top: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+th {
+  background-color: #f2f2f2;
+}
+td.panen {
+  background-color: #4CAF50; /* Hijau */
+  color: white;
+}
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 400px;
+}
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+td.panen {
+  background-color: #4CAF50; /* Hijau */
+  color: white;
+  cursor: pointer; /* Tambahkan ini agar terlihat clickable */
+}
+
+</style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Dashboard KSA Jagung Jawa Tengah</h1>
+        
+        <!-- Nav Tabs -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">Dashboard</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="analisis-tab" data-bs-toggle="tab" data-bs-target="#analisis" type="button" role="tab">Analisis Data</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data" type="button" role="tab">Data</button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="myTabContent">
+            <!-- Tab Dashboard -->
+            <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+                <h3>Informasi KSA Jagung Jawa Tengah</h3>
+                <div id="dashboard-cards" class="row">
+                    <!-- Cards akan diisi oleh JS -->
+                </div>
+            </div>
+            
+            <!-- Tab Analisis Data -->
+            <div class="tab-pane fade" id="analisis" role="tabpanel">
+                <h3>Analisis Data</h3>
+                <div class="header">
+    <label for="sheetSelect"><b>Pilih Tahun / Sheet:</b></label>
+  <select id="sheetSelect"></select>
+  
+  <!-- Tambahkan ini: Dropdown filter kabupaten -->
+  <label for="kabupatenSelect"><b>Filter Kabupaten:</b></label>
+  <select id="kabupatenSelect">
+    <option value="">Semua Kabupaten</option>
+    <!-- Opsi akan diisi oleh JS -->
+  </select>
+</div>
+
+  <div id="status" class="status">⏳ Memuat data…</div>
+
+  <div class="chart-box">
+    <canvas id="chart"></canvas>
+  </div>
+<!-- Tambahkan di bawah <div class="chart-box"> -->
+<div class="table-box">
+  <h2>Identifikasi Panen Pada Sub Segmen KSA Jagung</h2>
+  <div id="summary">
+    <p>Kabupaten: <span id="kabupatenSummary"></span></p>
+    <p>Jumlah Segmen: <span id="jumlahSegmen"></span></p>
+    <p>Jumlah SubSegmen: <span id="jumlahSubSegmen"></span></p>
+    <p>Jumlah panen: <span id="jumlahPanenTotal"></span></p>
+  </div>
+  <table id="panenTable">
+    <thead>
+      <tr>
+        <th>Kabupaten</th>
+        <th>ID-Subsegmen</th>
+        <th>Jan</th>
+        <th>Feb</th>
+        <th>Mar</th>
+        <th>Apr</th>
+        <th>Mei</th>
+        <th>Jun</th>
+        <th>Jul</th>
+        <th>Agu</th>
+        <th>Sep</th>
+        <th>Okt</th>
+        <th>Nov</th>
+        <th>Des</th>
+		<th>Jumlah Panen</th>
+      </tr>
+    </thead>
+    <tbody id="panenTableBody">
+      <!-- Baris akan diisi oleh JS -->
+    </tbody>
+  </table>
+</div>
+</div>
+<div id="panenModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3>Detail Panen</h3>
+    <p id="modalText"></p>
+  </div>
+</div>
+            
+            <!-- Tab Data -->
+            <div class="tab-pane fade" id="data" role="tabpanel">
+                <h3>Data dari Spreadsheet</h3>
+                <div class="mb-3">
+                    <label for="sheet-select" class="form-label">Pilih Sheet:</label>
+                    <select id="sheet-select" class="form-select">
+                        <!-- Dropdown akan diisi oleh JS -->
+                    </select>
+                </div>
+				<div class="mb-3">
+    <label for="kabupaten-filter" class="form-label">Filter Kabupaten:</label>
+    <select id="kabupaten-filter" class="form-select">
+        <option value="">Semua Kabupaten</option>
+        <!-- Dropdown akan diisi oleh JS -->
+    </select>
+</div>
+                <div id="data-table" class="table-responsive">
+                    <!-- Tabel akan diisi oleh JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Ganti dengan URL Web App Anda dari Apps Script
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVzgu7BbbbcwJdTrTAa1QHfmAd3ZFGPnQwxzgK5wUPZd2BfdCIFhTQeRi7q2_icnmN9w/exec'; // Ganti dengan URL asli
+        
+		// Variabel global untuk menyimpan data asli
+		let currentData = [];
+		
+        // Fungsi untuk mengambil daftar sheet
+        async function fetchSheetsList() {
+            const url = `${APPS_SCRIPT_URL}?action=getSheets`;
+            try {
+                const response = await fetch(url);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching sheets list:', error);
+                return [];
+            }
+        }
+        
+        // Fungsi untuk mengambil data dari sheet tertentu
+        async function fetchSheetData(sheetName) {
+            const url = `${APPS_SCRIPT_URL}?action=getData&sheet=${sheetName}`;
+            try {
+                const response = await fetch(url);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return [];
+            }
+        }
+        
+        // Fungsi untuk membuat tabel dari array objek
+        function createTable(data) {
+            if (data.length === 0) return '<p>Tidak ada data.</p>';
+            const keys = Object.keys(data[0]);
+            let table = '<table class="table table-striped"><thead><tr>';
+            keys.forEach(key => table += `<th>${key}</th>`);
+            table += '</tr></thead><tbody>';
+            data.forEach(row => {
+                table += '<tr>';
+                keys.forEach(key => table += `<td>${row[key]}</td>`);
+                table += '</tr>';
+            });
+            table += '</tbody></table>';
+            return table;
+        }
+        
+        // Load Dashboard
+        async function loadDashboard() {
+            const data = await fetch(`${APPS_SCRIPT_URL}?action=dashboard`).then(r => r.json());
+            if (data.length > 0) {
+                // Asumsi kolom: 'Amatan', 'Hasil', dll. Sesuaikan jika berbeda
+                const totalAmatan = data.reduce((sum, row) => sum + (parseFloat(row.Amatan) || 0), 0);
+                const avgHasil = data.reduce((sum, row) => sum + (parseFloat(row.Hasil) || 0), 0) / data.length;
+                document.getElementById('dashboard-cards').innerHTML = `
+                    <div class="col-md-4"><div class="card"><div class="card-body"><h5>Total Amatan</h5><p>${totalAmatan}</p></div></div></div>
+                    <div class="col-md-4"><div class="card"><div class="card-body"><h5>Rata-rata Hasil</h5><p>${avgHasil.toFixed(2)}</p></div></div></div>
+                    <div class="col-md-4"><div class="card"><div class="card-body"><h5>Jumlah Data</h5><p>${data.length}</p></div></div></div>
+                `;
+            }
+        }
+        
+        // Load Analisis Data
+async function loadAnalisis() {
+    try {
+        const data = await fetch(`${APPS_SCRIPT_URL}?action=analysis`).then(r => r.json());
+        console.log('Analysis data loaded:', data.length, 'rows');
+        console.log('Sample data:', data.slice(0, 5)); // Debug: Lihat sample data
+        
+        if (data.length === 0) {
+            console.warn('No data for analysis');
+            document.getElementById('lainnya-content').innerHTML = '<p>Tidak ada data analisis.</p>';
+            return;
+        }
+        
+        // Fallback key: Jika "Bulan" tidak ada, gunakan key pertama; jika "Nilai Amatan" tidak ada, gunakan key kedua
+        const keys = Object.keys(data[0]);
+        const bulanKey = keys.find(key => key.toLowerCase().includes('bulan') || key.toLowerCase().includes('month')) || keys[0]; // Fallback ke key pertama
+        const nilaiKey = keys.find(key => key.toLowerCase().includes('nilai amatan') || key.toLowerCase().includes('amatan')) || keys[1]; // Fallback ke key kedua
+        console.log('Using bulanKey:', bulanKey, 'nilaiKey:', nilaiKey);
+        
+        // Kelompokkan data berdasarkan bulan
+        const groupedByBulan = {};
+        data.forEach(row => {
+            const bulan = row[bulanKey];
+            const nilai = row[nilaiKey];
+            if (bulan && nilai !== undefined) { // Skip jika bulan atau nilai kosong
+                if (!groupedByBulan[bulan]) groupedByBulan[bulan] = {};
+                groupedByBulan[bulan][nilai] = (groupedByBulan[bulan][nilai] || 0) + 1;
+            }
+        });
+        console.log('Grouped data:', groupedByBulan);
+        
+        // Dapatkan semua bulan unik dan nilai amatan unik
+        const bulanLabels = Object.keys(groupedByBulan).sort(); // Sort bulan
+        const nilaiUnik = [...new Set(data.map(row => row[nilaiKey]).filter(val => val !== undefined))].sort((a, b) => a - b); // Sort nilai, filter undefined
+        console.log('Bulan labels:', bulanLabels, 'Nilai unik:', nilaiUnik);
+        
+        if (bulanLabels.length === 0 || nilaiUnik.length === 0) {
+            console.warn('No valid data for chart');
+            document.getElementById('lainnya-content').innerHTML = '<p>Data tidak valid untuk grafik.</p>';
+            return;
+        }
+        
+        // Buat datasets untuk stacked chart
+        const colors = ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 205, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)']; // Warna fixed
+        const datasets = nilaiUnik.map((nilai, index) => ({
+            label: `Nilai Amatan ${nilai}`,
+            data: bulanLabels.map(bulan => groupedByBulan[bulan][nilai] || 0),
+            backgroundColor: colors[index % colors.length] // Warna berulang jika lebih dari 5
+        }));
+        
+        // Update stacked chart
+        const ctx = document.getElementById('stackedChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: { labels: bulanLabels, datasets },
+                options: {
+                    scales: { x: { stacked: true }, y: { stacked: true } },
+                    plugins: { title: { display: true, text: 'Stacked Chart Amatan KSA Berdasarkan Bulan' } }
+                }
+            });
+            console.log('Stacked chart created');
+        } else {
+            console.error('Canvas stackedChart not found');
+        }
+        
+        // Pola Petanaman tetap (asumsi line chart)
+        const polaKey = keys.find(key => key.toLowerCase().includes('pola') || key.toLowerCase().includes('petanaman')) || keys[2] || bulanKey; // Fallback
+        const polaLabels = data.map(row => row[bulanKey]);
+        const polaData = data.map(row => row[polaKey] || 0);
+        const polaCtx = document.getElementById('polaChart');
+        if (polaCtx) {
+            new Chart(polaCtx, { 
+                type: 'line', 
+                data: { labels: polaLabels, datasets: [{ label: 'Pola Petanaman', data: polaData, borderColor: 'rgba(75, 192, 192, 1)' }] } 
+            });
+        }
+        
+        // Lainnya: Tampilkan ringkasan
+        document.getElementById('lainnya-content').innerHTML = `<p>Total data analisis: ${data.length}</p><p>Bulan unik: ${bulanLabels.join(', ')}</p>`;
+    } catch (error) {
+        console.error('Error in loadAnalisis:', error);
+        document.getElementById('lainnya-content').innerHTML = '<p>Error loading analisis data. Check console.</p>';
+    }
+}
+		
+		// Fungsi untuk populate dropdown filter Kabupaten
+// Fungsi untuk populate dropdown filter Kabupaten
+function populateKabupatenFilter(data) {
+    const select = document.getElementById('kabupaten-filter');
+    select.innerHTML = '<option value="">Semua Kabupaten</option>';
+    if (data.length === 0) return;
+    
+    // Debug: Lihat key header dan nilai kolom A
+    console.log('Keys in data:', Object.keys(data[0]));
+    console.log('Sample data rows:', data.slice(0, 3)); // Lihat struktur data
+    
+    // Asumsi key untuk kolom A adalah "Kabupaten"; jika tidak, gunakan key pertama sebagai fallback
+    const kabupatenKey = Object.keys(data[0]).find(key => key.toLowerCase().includes('kabupaten') || key.toLowerCase().includes('daerah') || key.toLowerCase().includes('kode')) || Object.keys(data[0])[0]; // Fallback ke key pertama
+    console.log('Using key for Kabupaten:', kabupatenKey);
+    
+    try {
+        const kabupatenSet = new Set(data.map(row => (row[kabupatenKey] || '').toString().trim()).filter(val => val)); // Trim, filter empty, toString untuk safety
+        kabupatenSet.forEach(kab => {
+            const option = document.createElement('option');
+            option.value = kab;
+            option.textContent = kab;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error populating filter:', error);
+    }
+}
+
+// Fungsi untuk menampilkan data yang difilter
+function displayFilteredData(data) {
+    document.getElementById('data-table').innerHTML = createTable(data);
+}
+
+// Fungsi untuk filter data berdasarkan Kabupaten
+function filterData() {
+    const selectedKabupaten = document.getElementById('kabupaten-filter').value.trim();
+    console.log('Selected Kabupaten:', selectedKabupaten);
+    
+    if (!currentData.length) {
+        console.warn('No data to filter');
+        return;
+    }
+    
+    // Gunakan key yang sama seperti di populateKabupatenFilter
+    const kabupatenKey = Object.keys(currentData[0]).find(key => key.toLowerCase().includes('kabupaten') || key.toLowerCase().includes('daerah') || key.toLowerCase().includes('kode')) || Object.keys(currentData[0])[0];
+    console.log('Filtering with key:', kabupatenKey);
+    
+    try {
+        const filteredData = selectedKabupaten ? currentData.filter(row => (row[kabupatenKey] || '').toString().trim().toLowerCase() === selectedKabupaten.toLowerCase()) : currentData;
+        console.log('Filtered data length:', filteredData.length);
+        displayFilteredData(filteredData);
+    } catch (error) {
+        console.error('Error filtering data:', error);
+        displayFilteredData(currentData); // Fallback: tampilkan semua data jika error
+    }
+}
+        
+       // Load Data Tab
+async function loadData(sheetName) {
+    try {
+        currentData = await fetchSheetData(sheetName);
+        console.log('Loaded data for sheet:', sheetName, 'Length:', currentData.length);
+        populateKabupatenFilter(currentData);
+        displayFilteredData(currentData);
+    } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('data-table').innerHTML = '<p>Error loading data. Check console.</p>';
+    }
+}
+        
+        // Populate dropdown dan load data awal
+        async function initDataTab() {
+            const sheets = await fetchSheetsList();
+            const select = document.getElementById('sheet-select');
+            select.innerHTML = '';
+            sheets.forEach(sheet => {
+                const option = document.createElement('option');
+                option.value = sheet;
+                option.textContent = sheet;
+                select.appendChild(option);
+            });
+            // Load data default (sheet pertama)
+            if (sheets.length > 0) loadData(sheets[0]);
+        }
+        
+        // Event listeners
+document.getElementById('sheet-select').addEventListener('change', (e) => loadData(e.target.value));
+document.getElementById('kabupaten-filter').addEventListener('change', filterData); // Tambahkan ini
+        
+        // Load awal
+        loadDashboard();
+        loadAnalisis();
+        initDataTab();
+		
+		
+	const API_URL =
+  "https://script.google.com/macros/s/AKfycbx6y99wUJIR2Ex9yyZK2yaAZMvxQuqHS3ZY9d5C0D-yjaWak8jL_RM4h1FzDS20fs2j/exec";
+
+let apiData = {};
+let chartInstance = null;
+let rawData = {}; // Tambahkan untuk menyimpan data mentah per sheet
+// Warna konsisten untuk fase
+const COLORS = {
+  "Tidak diamati": "#BDBDBD",
+  "Vegetatif Awal": "#8BC34A",
+  "Vegetatif Akhir": "#4CAF50",
+  "Reproduktif Awal": "#FFC107",
+  "Reproduktif Akhir": "#FF9800",
+  "Panen Hijauan": "#795548",
+  "Panen Muda": "#FF5722",
+  "Panen Pipilan": "#E91E63",
+  "Persiapan Lahan": "#03A9F4",
+  "Lahan Pertanian Bukan Jagung": "#9E9E9E",
+  "Bukan Lahan Pertanian": "#607D8B",
+  "Puso": "#000000",
+  "Bera": "#9C27B0"
+};
+
+const PHASE_DESCRIPTIONS = {
+  5: "Panen Hijauan",
+  6: "Panen Muda",
+  7: "Panen Pipilan"
+};
+
+fetch(API_URL)
+  .then(res => res.json())
+  .then(data => {
+    apiData = data;
+    const sheets = Object.keys(data);
+
+    const select = document.getElementById("sheetSelect");
+    sheets.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      select.appendChild(opt);
+    });
+
+    // Kumpulkan semua kabupaten unik dari semua sheet
+    const allKabupaten = new Set();
+    sheets.forEach(s => {
+      if (apiData[s].kabupaten) {
+        apiData[s].kabupaten.forEach(kab => allKabupaten.add(kab));
+      }
+    });
+
+    // Isi dropdown kabupaten
+    const kabupatenSelect = document.getElementById("kabupatenSelect");
+    Array.from(allKabupaten).sort().forEach(kab => {
+      const opt = document.createElement("option");
+      opt.value = kab;
+      opt.textContent = kab;
+      kabupatenSelect.appendChild(opt);
+    });
+
+    document.getElementById("status").textContent = "✅ Data berhasil dimuat";
+
+    // Render pertama (sheet pertama, tanpa filter)
+    renderChart(sheets[0]);
+    loadRawData(sheets[0]); // Load raw data untuk tabel
+
+    // Event dropdown sheet
+    select.addEventListener("change", e => {
+      const selectedKabupaten = document.getElementById("kabupatenSelect").value;
+      renderChart(e.target.value, selectedKabupaten);
+      loadRawData(e.target.value); // Load raw data saat ganti sheet
+    });
+
+    // Event dropdown kabupaten
+    kabupatenSelect.addEventListener("change", e => {
+      const selectedSheet = document.getElementById("sheetSelect").value;
+      renderChart(selectedSheet, e.target.value);
+      renderTable(selectedSheet, e.target.value); // Tambahkan ini untuk update tabel berdasarkan filter kabupaten
+    });
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("status").textContent =
+      "❌ Gagal memuat data API";
+  });
+
+// Fungsi untuk load raw data
+function loadRawData(sheetName) {
+  fetch(`${API_URL}?action=getRawData&sheet=${encodeURIComponent(sheetName)}`)
+    .then(res => res.json())
+    .then(data => {
+      rawData[sheetName] = data;
+      const selectedKabupaten = document.getElementById("kabupatenSelect").value;
+      renderTable(sheetName, selectedKabupaten);
+    })
+    .catch(err => {
+      console.error("Gagal memuat raw data:", err);
+    });
+}
+
+
+function renderTable(sheetName, filterKabupaten = "") {
+  const data = rawData[sheetName];
+  if (!data) return;
+
+  const tbody = document.getElementById("panenTableBody");
+  tbody.innerHTML = ""; // Kosongkan tabel
+
+  // Kelompokkan data berdasarkan Kabupaten dan ID-Subsegmen
+  const grouped = {};
+  data.forEach(row => {
+    const kab = row.A || row.Kabupaten;
+    const subseg = row.B || row['ID-Subsegmen'];
+    const key = `${kab}-${subseg}`;
+    if (!grouped[key]) {
+      grouped[key] = { kab: kab, subseg: subseg, bulan: Array(12).fill(null).map(() => []) };
+    }
+    // Kolom D sampai O (index 3 sampai 14) untuk Jan-Des
+    for (let i = 3; i <= 14; i++) {
+      const colName = String.fromCharCode(65 + i);
+      const nilai = row[colName] || row[Object.keys(row)[i]];
+      const bulanIndex = i - 3;
+      if (nilai && [5, 6, 7].includes(parseInt(nilai))) {
+        grouped[key].bulan[bulanIndex].push(parseInt(nilai));
+      }
+    }
+  });
+
+  // Filter berdasarkan kabupaten jika ada
+  let filteredGrouped = Object.values(grouped);
+  if (filterKabupaten) {
+    filteredGrouped = filteredGrouped.filter(item => item.kab == filterKabupaten);
+  }
+
+  let totalJumlahPanen = 0;
+
+  // Buat baris tabel
+  filteredGrouped.forEach(item => {
+    const tr = document.createElement("tr");
+    
+    // Buat td untuk kabupaten
+    const tdKab = document.createElement("td");
+    tdKab.textContent = item.kab;
+    tr.appendChild(tdKab);
+    
+    // Buat td untuk subsegmen
+    const tdSubseg = document.createElement("td");
+    tdSubseg.textContent = item.subseg;
+    tr.appendChild(tdSubseg);
+    
+    // Buat td untuk bulan
+    item.bulan.forEach((vals, idx) => {
+      const td = document.createElement("td");
+      if (vals.length > 0) {
+        td.className = "panen";
+        td.setAttribute("data-nilai", vals.join(","));
+        td.textContent = "✓";
+      } else {
+        td.textContent = "0";
+      }
+      tr.appendChild(td);
+    });
+    
+    // Hitung jumlah panen: jumlah kelompok consecutive bulan dengan panen
+    const panenBulan = item.bulan.map((vals, idx) => vals.length > 0 ? idx : -1).filter(idx => idx !== -1);
+    let jumlahPanen = 0;
+    if (panenBulan.length > 0) {
+      jumlahPanen = 1; // Setidaknya 1
+      for (let i = 1; i < panenBulan.length; i++) {
+        if (panenBulan[i] !== panenBulan[i-1] + 1) {
+          jumlahPanen++;
+        }
+      }
+    }
+    
+    // Buat td untuk jumlah panen
+    const tdJumlah = document.createElement("td");
+    tdJumlah.textContent = jumlahPanen;
+    tr.appendChild(tdJumlah);
+    
+    tbody.appendChild(tr);
+
+    totalJumlahPanen += jumlahPanen;
+  });
+
+  // Update summary
+  document.getElementById("kabupatenSummary").textContent = filterKabupaten || "Semua Kabupaten";
+  const jumlahSubSegmen = filteredGrouped.length;
+  document.getElementById("jumlahSubSegmen").textContent = jumlahSubSegmen;
+  document.getElementById("jumlahSegmen").textContent = Math.floor(jumlahSubSegmen / 4);
+  document.getElementById("jumlahPanenTotal").textContent = totalJumlahPanen;
+}
+function renderChart(sheetName, filterKabupaten = "") {
+  const sheet = apiData[sheetName];
+  const ctx = document.getElementById("chart").getContext("2d");
+
+  if (chartInstance) chartInstance.destroy();
+
+  let labels = sheet.labels;
+  let seriesData;
+
+  if (filterKabupaten) {
+    // Gunakan data per kabupaten
+    if (sheet.data && sheet.data[filterKabupaten]) {
+      seriesData = sheet.data[filterKabupaten];
+    } else {
+      // Jika kabupaten tidak ditemukan, tampilkan kosong
+      seriesData = {};
+      Object.keys(COLORS).forEach(key => seriesData[key] = Array(12).fill(0));
+    }
+  } else {
+    // Gunakan aggregated (semua kabupaten)
+    seriesData = sheet.aggregated;
+  }
+
+  const datasets = Object.keys(seriesData).map(label => ({
+    label: label,
+    data: seriesData[label],
+    backgroundColor: COLORS[label] || "#cccccc"
+  }));
+
+  chartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "right"
+        },
+        title: {
+          display: true,
+          text: "Tahun / Sheet: " + sheetName + (filterKabupaten ? " - Kabupaten: " + filterKabupaten : "")
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          title: { display: true, text: "Jumlah Amatan" }
+        }
+      }
+    }
+  });
+}
+
+// Tambahkan console.log tambahan di event listener untuk debug lebih lanjut
+document.getElementById("panenTableBody").addEventListener("click", function(e) {
+  console.log("Event triggered on tbody"); // Tambahkan ini untuk debug
+  console.log("Clicked element:", e.target); // Tambahkan ini untuk debug
+  if (e.target.classList.contains("panen")) {
+    const nilaiStr = e.target.getAttribute("data-nilai");
+    console.log("Data-nilai:", nilaiStr); // Tambahkan ini untuk debug
+    const nilais = nilaiStr.split(",").map(n => parseInt(n));
+    const nilaiList = nilais.join(";");
+    const faseList = nilais.map(n => PHASE_DESCRIPTIONS[n] || "Tidak diketahui").join(", ");
+    const modalText = `Nilai Amatan: ${nilaiList}<br>Fase Amatan: ${faseList}`;
+    console.log("Modal text:", modalText); // Tambahkan ini untuk debug
+    document.getElementById("modalText").innerHTML = modalText;
+    document.getElementById("panenModal").style.display = "block";
+    console.log("Modal should be visible now"); // Tambahkan ini untuk debug
+  }
+});
+// Event untuk close modal
+document.querySelector(".close").addEventListener("click", function() {
+  document.getElementById("panenModal").style.display = "none";
+});
+
+// Klik di luar modal untuk close
+window.addEventListener("click", function(event) {
+  if (event.target == document.getElementById("panenModal")) {
+    document.getElementById("panenModal").style.display = "none";
+  }
+});
+
+
+    </script>
+</body>
+</html>
