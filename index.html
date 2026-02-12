@@ -119,6 +119,108 @@ td.panen {
   cursor: pointer; /* Tambahkan ini agar terlihat clickable */
 }
 
+@media (max-width: 1024px) {
+  /* Wrapper utama: Kurangi padding dan margin untuk layar kecil */
+  .wrapper {
+    padding: 10px;
+    margin: 0 auto;
+  }
+  
+  /* Header: Susun elemen secara vertikal di tablet/HP */
+  .header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  /* Tombol tahun dan bulan: Bungkus tombol agar tidak overflow, gunakan flex-wrap */
+  #tahun-buttons, #bulan-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  #tahun-buttons .btn, #bulan-buttons .btn {
+    flex: 1 1 auto; /* Tombol akan menyesuaikan lebar */
+    min-width: 80px; /* Minimal lebar agar tidak terlalu kecil */
+    font-size: 12px; /* Font lebih kecil untuk HP */
+    padding: 6px 10px;
+  }
+  
+  /* Cards dashboard: Susun dalam 2 kolom di tablet, 1 kolom di HP */
+  #dashboard-cards .col-md-4 {
+    flex: 0 0 50%; /* 2 kolom di tablet */
+    max-width: 50%;
+  }
+  @media (max-width: 768px) {
+    #dashboard-cards .col-md-4 {
+      flex: 0 0 100%; /* 1 kolom di HP */
+      max-width: 100%;
+    }
+  }
+  
+  /* Chart: Kurangi tinggi maksimal dan pastikan responsif */
+  canvas {
+    max-height: 300px !important; /* Lebih kecil untuk HP */
+  }
+  
+  /* Tabel: Tambahkan scroll horizontal untuk mencegah overflow */
+  .table-box {
+    overflow-x: auto; /* Scroll horizontal jika tabel lebar */
+    padding: 15px;
+  }
+  table {
+    min-width: 600px; /* Pastikan tabel tidak menyusut terlalu kecil */
+    font-size: 12px; /* Font lebih kecil untuk HP */
+  }
+  th, td {
+    padding: 6px; /* Padding lebih kecil */
+    white-space: nowrap; /* Cegah teks wrap agar tabel tidak rusak */
+  }
+  
+  /* Modal: Sesuaikan ukuran untuk layar kecil */
+  .modal-content {
+    width: 90%; /* Lebih lebar di HP */
+    max-width: 350px; /* Maksimal tetap kecil */
+    margin: 20% auto; /* Posisi lebih atas */
+    padding: 15px;
+  }
+  
+  /* Dropdown dan select: Font lebih kecil */
+  select, .form-select {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+  
+  /* Status dan summary: Font lebih kecil */
+  #status, #summary p {
+    font-size: 14px;
+  }
+  
+  /* Tab content: Padding lebih kecil */
+  .tab-content {
+    padding: 10px;
+  }
+}
+
+/* Khusus HP (max-width: 480px): Penyesuaian ekstra */
+@media (max-width: 480px) {
+  h1, h3 {
+    font-size: 1.5rem; /* Judul lebih kecil */
+  }
+  .card-body h5 {
+    font-size: 1rem;
+  }
+  .card-body h1 {
+    font-size: 2rem;
+  }
+  canvas {
+    max-height: 250px !important; /* Lebih kecil lagi */
+  }
+  table {
+    font-size: 10px; /* Font minimal untuk HP kecil */
+  }
+}
+		
 </style>
 </head>
 <body>
