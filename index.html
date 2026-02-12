@@ -220,6 +220,34 @@ td.panen {
     font-size: 10px; /* Font minimal untuk HP kecil */
   }
 }
+/* Responsivitas Chart untuk HP dan Tablet */
+@media (max-width: 1024px) {
+  .chart-box {
+    height: 400px; /* Tinggi tetap untuk tablet agar chart lebih besar */
+    position: relative;
+  }
+  canvas {
+    max-height: 400px !important; /* Tingkatkan dari 300px agar lebih besar */
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-box {
+    height: 350px; /* Tinggi untuk HP besar */
+  }
+  canvas {
+    max-height: 350px !important; /* Tingkatkan dari 300px */
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-box {
+    height: 300px; /* Tinggi untuk HP kecil, tapi lebih besar dari sebelumnya */
+  }
+  canvas {
+    max-height: 300px !important; /* Tingkatkan dari 250px agar tidak terlalu kecil */
+  }
+}
 		
 </style>
 </head>
