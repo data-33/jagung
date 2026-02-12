@@ -133,6 +133,18 @@ td.panen {
             <!-- Tab Dashboard -->
             <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
                 <h3>Informasi KSA Jagung Jawa Tengah</h3>
+				<div class="mb-3">
+  <label><b>Pilih Tahun Data:</b></label><br>
+  <div class="btn-group" role="group" id="tahun-buttons">
+    <!-- Tombol akan diisi oleh JS -->
+  </div>
+</div>
+<div class="mb-3">
+  <label><b>Pilih Bulan:</b></label><br>
+  <div class="btn-group" role="group" id="bulan-buttons">
+    <!-- Tombol akan diisi oleh JS -->
+  </div>
+</div>
                 <div id="dashboard-cards" class="row">
                     <!-- Cards akan diisi oleh JS -->
                 </div>
@@ -520,7 +532,61 @@ fetch(API_URL)
         apiData[s].kabupaten.forEach(kab => allKabupaten.add(kab));
       }
     });
+// Load rawData untuk semua sheets agar bisa hitung metrik total
+    const loadAllRawDataPromises = sheets.map(sheet => 
+      fetch(`${API_URL}?action=getRawData&sheet=${encodeURIComponent(sheet)}`)
+        .then(res => res.json())
+        .then(data => { rawData[sheet] = data; })
+        .catch(err => console.error(`Gagal load rawData untuk ${sheet}:`, err))
+    );
+    
+    Promise.all(loadAllRawDataPromises).then(() => {
+      // Gabungkan semua rawData dari semua sheets
+      const allData = [];
+      sheets.forEach(s => {
+        if (rawData[s]) allData.push(...rawData[s]);
+      });
+      
+	  // Set default tahun ke sheet pertama (2025)
+    const defaultSheet = sheets[0];
+    const defaultMetrics = calculateMetrics(rawData[defaultSheet] || []);
+    updateDashboardCards(defaultMetrics);
+    
+    // Buat tombol untuk setiap sheet (tahun)
+    const buttonContainer = document.getElementById('tahun-buttons');
+    sheets.forEach((sheet, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-primary';
+      if (index === 0) btn.classList.add('active'); // Default aktif
+      btn.textContent = sheet;
+      btn.dataset.sheet = sheet;
+      buttonContainer.appendChild(btn);
+    });
+    
+    // Event listener untuk tombol tahun
+    buttonContainer.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        // Hapus active dari semua tombol
+        buttonContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        // Tambah active ke tombol yang diklik
+        e.target.classList.add('active');
+        
+        const selectedSheet = e.target.dataset.sheet;
+        const metrics = calculateMetrics(rawData[selectedSheet] || []);
+        updateDashboardCards(metrics);
+      }
+    });
 
+	  
+      // Hitung metrik
+      const metrics = calculateMetrics(allData);
+      
+      // Update cards dashboard
+      updateDashboardCards(metrics);
+    }).catch(err => {
+      console.error("Error loading all rawData:", err);
+    });
     // Isi dropdown kabupaten
     const kabupatenSelect = document.getElementById("kabupatenSelect");
     Array.from(allKabupaten).sort().forEach(kab => {
@@ -750,6 +816,175 @@ window.addEventListener("click", function(event) {
   }
 });
 
+function calculateMetrics(data) {
+  const subSegmenSet = new Set();
+  const panenSet = new Set();
+  const beraSet = new Set();
+  const bukanLahanSet = new Set();
+  const bukanJagungSet = new Set();
+  
+  data.forEach(row => {
+    const subseg = row.B || row['ID-Subsegmen'];
+    if (subseg) subSegmenSet.add(subseg);
+    
+    // Kolom D sampai O (Jan-Des, index 3-14)
+    for (let i = 3; i <= 14; i++) {
+      const colName = String.fromCharCode(65 + i);
+      const nilai = parseInt(row[colName] || row[Object.keys(row)[i]] || 0);
+      
+      if ([5, 6, 7].includes(nilai)) panenSet.add(subseg);  // Panen Hijauan, Muda, Pipilan
+      if (nilai === 15) beraSet.add(subseg);  // Bera
+      if (nilai === 10) bukanLahanSet.add(subseg);  // Bukan Lahan Pertanian
+      if (nilai === 9) bukanJagungSet.add(subseg);  // Lahan Pertanian Bukan Jagung
+    }
+  });
+  
+  return {
+    jumlahSegmen: Math.floor(subSegmenSet.size / 4),  // Asumsi 1 segmen = 4 subsegmen
+    jumlahSubsegmen: subSegmenSet.size,
+    jumlahSubsegmenPanen: panenSet.size,
+    jumlahSubsegmenBera: beraSet.size,
+    jumlahSubsegmenBukanLahan: bukanLahanSet.size,
+    jumlahSubsegmenBukanJagung: bukanJagungSet.size
+  };
+}
+
+const bulanNames = ["Semua Bulan", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const bulanContainer = document.getElementById('bulan-buttons');
+    bulanNames.forEach((bulan, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-secondary';
+      if (index === 0) btn.classList.add('active'); // Default "Semua Bulan" aktif
+      btn.textContent = bulan;
+      btn.dataset.bulanIndex = index === 0 ? null : index - 1; // 0=Semua, 1=Jan(0), 2=Feb(1), ..., 13=Des(11)
+      bulanContainer.appendChild(btn);
+    });
+    
+    // Variabel untuk menyimpan bulan yang dipilih (default null = semua bulan)
+    let selectedBulanIndex = null;
+    
+    // Event listener untuk tombol bulan
+    bulanContainer.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        // Hapus active dari semua tombol bulan
+        bulanContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        // Tambah active ke tombol yang diklik
+        e.target.classList.add('active');
+        
+        selectedBulanIndex = e.target.dataset.bulanIndex ? parseInt(e.target.dataset.bulanIndex) : null;
+        
+        // Update metrik berdasarkan tahun dan bulan yang dipilih
+        const selectedSheet = document.querySelector('#tahun-buttons .active').dataset.sheet;
+        const metrics = calculateMetrics(rawData[selectedSheet] || [], selectedBulanIndex);
+        updateDashboardCards(metrics);
+      }
+    });
+    
+    // Modifikasi event listener tombol tahun untuk juga memperhitungkan bulan yang dipilih
+    buttonContainer.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        // Hapus active dari semua tombol tahun
+        buttonContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        // Tambah active ke tombol yang diklik
+        e.target.classList.add('active');
+        
+        const selectedSheet = e.target.dataset.sheet;
+        const metrics = calculateMetrics(rawData[selectedSheet] || [], selectedBulanIndex);
+        updateDashboardCards(metrics);
+      }
+    });
+
+// Modifikasi fungsi calculateMetrics(data, bulanIndex = null) untuk menerima parameter bulanIndex
+function calculateMetrics(data, bulanIndex = null) {
+  const subSegmenSet = new Set();
+  const panenSet = new Set();
+  const beraSet = new Set();
+  const bukanLahanSet = new Set();
+  const bukanJagungSet = new Set();
+  
+  data.forEach(row => {
+    const subseg = row.B || row['ID-Subsegmen'];
+    if (subseg) subSegmenSet.add(subseg);
+    
+    // Jika bulanIndex null, hitung semua bulan (kolom 3-14); jika ada, hanya kolom tertentu
+    const bulanIndices = bulanIndex !== null ? [bulanIndex + 3] : Array.from({length: 12}, (_, i) => i + 3); // 3=Jan, 4=Feb, ..., 14=Des
+    
+    bulanIndices.forEach(i => {
+      const colName = String.fromCharCode(65 + i);
+      const nilai = parseInt(row[colName] || row[Object.keys(row)[i]] || 0);
+      
+      if ([5, 6, 7].includes(nilai)) panenSet.add(subseg);  // Panen Hijauan, Muda, Pipilan
+      if (nilai === 15) beraSet.add(subseg);  // Bera
+      if (nilai === 10) bukanLahanSet.add(subseg);  // Bukan Lahan Pertanian
+      if (nilai === 9) bukanJagungSet.add(subseg);  // Lahan Pertanian Bukan Jagung
+    });
+  });
+  
+  return {
+    jumlahSegmen: Math.floor(subSegmenSet.size / 4),  // Asumsi 1 segmen = 4 subsegmen
+    jumlahSubsegmen: subSegmenSet.size,
+    jumlahSubsegmenPanen: panenSet.size,
+    jumlahSubsegmenBera: beraSet.size,
+    jumlahSubsegmenBukanLahan: bukanLahanSet.size,
+    jumlahSubsegmenBukanJagung: bukanJagungSet.size
+  };
+}
+
+
+function updateDashboardCards(metrics) {
+  const cardsHtml = `
+    <div class="col-md-4 mb-3">
+      <div class="card bg-primary text-white h-100">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <h5>Jumlah Segmen</h5>
+          <h1 class="text-center font-weight-bold">${metrics.jumlahSegmen}</h1>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card bg-success text-white h-100">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <h5>Jumlah Subsegmen</h5>
+          <h1 class="text-center font-weight-bold">${metrics.jumlahSubsegmen}</h1>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card bg-warning text-dark h-100">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <h5>Jumlah SubSegmen yang Panen</h5>
+          <h1 class="text-center font-weight-bold">${metrics.jumlahSubsegmenPanen}</h1>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card bg-danger text-white h-100">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <h5>Jumlah Subsegmen yang Bera</h5>
+          <h1 class="text-center font-weight-bold">${metrics.jumlahSubsegmenBera}</h1>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card bg-info text-white h-100">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <h5>Jumlah Subsegmen yang Bukan Lahan Pertanian</h5>
+          <h1 class="text-center font-weight-bold">${metrics.jumlahSubsegmenBukanLahan}</h1>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card bg-secondary text-white h-100">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <h5>Jumlah Subsegmen yang Lahan Pertanian Bukan Jagung</h5>
+          <h1 class="text-center font-weight-bold">${metrics.jumlahSubsegmenBukanJagung}</h1>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('dashboard-cards').innerHTML = cardsHtml;
+}
 
     </script>
 </body>
