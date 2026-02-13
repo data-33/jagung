@@ -341,6 +341,10 @@ td.panen {
     font-size: 1.8rem;
   }
 }		
+
+.panen-kuning {
+  color: yellow; /* Checklist kuning */
+}
 </style>
 </head>
 <body>
@@ -890,7 +894,7 @@ function renderTable(sheetName, filterKabupaten = "") {
       const colName = String.fromCharCode(65 + i);
       const nilai = row[colName] || row[Object.keys(row)[i]];
       const bulanIndex = i - 3;
-      if (nilai && [5, 6, 7].includes(parseInt(nilai))) {
+      if (nilai) {
         grouped[key].bulan[bulanIndex].push(parseInt(nilai));
       }
     }
@@ -921,9 +925,36 @@ function renderTable(sheetName, filterKabupaten = "") {
     // Buat td untuk bulan
     item.bulan.forEach((vals, idx) => {
       const td = document.createElement("td");
-      if (vals.length > 0) {
-        td.className = "panen";
-        td.setAttribute("data-nilai", vals.join(","));
+      let isPanen = false;
+      let isKuning = false;
+      let panenCode = null;
+      
+      // Cek nilai asli untuk panen (5,6,7)
+      if (vals.some(v => [5,6,7].includes(v))) {
+        isPanen = true;
+        panenCode = vals.filter(v => [5,6,7].includes(v)).join(",");
+      }
+      
+      // Cek kondisi baru: bulan sebelumnya
+      if (idx > 0) { // Hanya jika bukan Januari
+        const prevVals = item.bulan[idx - 1];
+        const prevNilai = prevVals.length > 0 ? prevVals[prevVals.length - 1] : null; // Ambil nilai terakhir bulan sebelumnya
+        const currNilai = vals.length > 0 ? vals[vals.length - 1] : null; // Ambil nilai terakhir bulan ini
+        
+        if (prevNilai === 3 && [1,2].includes(currNilai)) {
+          isPanen = true;
+          isKuning = true;
+          panenCode = "6"; // Override untuk popup
+        } else if (prevNilai === 4 && [1,2,3].includes(currNilai)) {
+          isPanen = true;
+          isKuning = true;
+          panenCode = "7"; // Override untuk popup
+        }
+      }
+      
+      if (isPanen) {
+        td.className = isKuning ? "panen panen-kuning" : "panen";
+        td.setAttribute("data-nilai", panenCode);
         td.textContent = "✓";
       } else {
         td.textContent = "0";
@@ -932,7 +963,7 @@ function renderTable(sheetName, filterKabupaten = "") {
     });
     
     // Hitung jumlah panen: jumlah kelompok consecutive bulan dengan panen
-    const panenBulan = item.bulan.map((vals, idx) => vals.length > 0 ? idx : -1).filter(idx => idx !== -1);
+    const panenBulan = item.bulan.map((vals, idx) => vals.some(v => [5,6,7].includes(v)) || (idx > 0 && ((item.bulan[idx-1].length > 0 && item.bulan[idx-1][item.bulan[idx-1].length-1] === 3 && [1,2].includes(vals[vals.length-1])) || (item.bulan[idx-1].length > 0 && item.bulan[idx-1][item.bulan[idx-1].length-1] === 4 && [1,2,3].includes(vals[vals.length-1])))) ? idx : -1).filter(idx => idx !== -1);
     let jumlahPanen = 0;
     if (panenBulan.length > 0) {
       jumlahPanen = 1; // Setidaknya 1
@@ -1021,19 +1052,25 @@ function renderChart(sheetName, filterKabupaten = "") {
 
 // Tambahkan console.log tambahan di event listener untuk debug lebih lanjut
 document.getElementById("panenTableBody").addEventListener("click", function(e) {
-  console.log("Event triggered on tbody"); // Tambahkan ini untuk debug
-  console.log("Clicked element:", e.target); // Tambahkan ini untuk debug
+  console.log("Event triggered on tbody");
+  console.log("Clicked element:", e.target);
   if (e.target.classList.contains("panen")) {
     const nilaiStr = e.target.getAttribute("data-nilai");
-    console.log("Data-nilai:", nilaiStr); // Tambahkan ini untuk debug
-    const nilais = nilaiStr.split(",").map(n => parseInt(n));
-    const nilaiList = nilais.join(";");
-    const faseList = nilais.map(n => PHASE_DESCRIPTIONS[n] || "Tidak diketahui").join(", ");
-    const modalText = `Nilai Amatan: ${nilaiList}<br>Fase Amatan: ${faseList}`;
-    console.log("Modal text:", modalText); // Tambahkan ini untuk debug
+    console.log("Data-nilai:", nilaiStr);
+    let modalText = "";
+    if (nilaiStr === "6") {
+      modalText = "Panen diantara 2 survei kode 6 Panen Muda";
+    } else if (nilaiStr === "7") {
+      modalText = "Panen diantara 2 survei kode 7 Panen Pipilan";
+    } else {
+      const nilais = nilaiStr.split(",").map(n => parseInt(n));
+      const faseList = nilais.map(n => PHASE_DESCRIPTIONS[n] || "Tidak diketahui").join(", ");
+      modalText = `Nilai Amatan: ${nilaiStr}<br>Fase Amatan: ${faseList}`;
+    }
+    console.log("Modal text:", modalText);
     document.getElementById("modalText").innerHTML = modalText;
     document.getElementById("panenModal").style.display = "block";
-    console.log("Modal should be visible now"); // Tambahkan ini untuk debug
+    console.log("Modal should be visible now");
   }
 });
 // Event untuk close modal
